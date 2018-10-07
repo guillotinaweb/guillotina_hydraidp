@@ -85,3 +85,10 @@ To add an oauth client to hydra::
         "token_endpoint_auth_method": "client_secret_post",
         "userinfo_signed_response_alg": "none"
     }'
+
+
+See https://github.com/guillotinaweb/guillotina_hydraidp/blob/master/integration_tests.py
+for an example on using the flow.
+
+
+This is just the API implementation. You will still need to implement the frontend!

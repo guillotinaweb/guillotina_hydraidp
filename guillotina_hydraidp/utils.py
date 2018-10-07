@@ -3,11 +3,11 @@ import uuid
 
 import argon2
 import asyncpg
-from guillotina import app_settings
-from guillotina.auth.validators import (check_functions, hash_functions,
-                                        hash_password)
+from guillotina import app_settings, configure
+from guillotina.auth.validators import hash_password
 from guillotina.component import get_utility
-from guillotina.interfaces import IApplication
+from guillotina.interfaces import (IApplication, IPasswordChecker,
+                                   IPasswordHasher)
 from pypika import PostgreSQLQuery as Query
 from pypika import Table
 
@@ -15,19 +15,21 @@ users_table = Table('hydra_users')
 ph = argon2.PasswordHasher()
 
 DB_ATTR = '_hydraidp_db_pool'
-hash_functions['argon2'] = ph.hash
 
 
-def argon_check_func(token, pw):
+@configure.utility(provides=IPasswordHasher, name='argon2')
+def argon_pw_hasher(pw, salt):
+    return ph.hash(pw + salt)
+
+
+@configure.utility(provides=IPasswordChecker, name='argon2')
+def argon_pw_checker(token, pw):
     split = token.split(':')
     try:
         return ph.verify(split[-1], pw + split[-2])
     except (argon2.exceptions.InvalidHash,
             argon2.exceptions.VerifyMismatchError):
         return False
-
-
-check_functions['argon2'] = argon_check_func
 
 
 async def get_db():
