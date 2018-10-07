@@ -53,7 +53,7 @@ Then you need to configure guillotina::
     hydra_admin_url: http://localhost:4445/
 
 
-To add an oauth client to hydra:
+To add an oauth client to hydra::
 
     curl -XPUT http://localhost:4445/clients/auth-code-client -d '{
         "client_id": "auth-code-client",
