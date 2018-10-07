@@ -15,3 +15,4 @@ def includeme(root):
     """
     configure.scan('guillotina_hydraidp.api')
     configure.scan('guillotina_hydraidp.storage')
+    configure.scan('guillotina_hydraidp.json_definitions')

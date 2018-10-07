@@ -1,8 +1,9 @@
-from guillotina import testing
-from guillotina.tests.fixtures import ContainerRequesterAsyncContextManager
-
-import json
+import aiohttp
 import pytest
+from guillotina import testing
+from guillotina.tests.fixtures import annotations
+from guillotina_hydraidp import utils
+from guillotina_hydraidp.tests.containers import start_hydra
 
 
 def base_settings_configurator(settings):
@@ -11,23 +12,21 @@ def base_settings_configurator(settings):
     else:
         settings['applications'] = ['guillotina_hydraidp']
 
+    settings['hydra_db'] = {
+        'dsn': 'postgres://postgres:@{}:{}/guillotina'.format(
+            annotations.get('pg_host', 'localhost'),
+            annotations.get('pg_port', 5432),
+        ),
+        'pool_size': 10
+    }
+
 
 testing.configure_with(base_settings_configurator)
 
 
-class guillotina_hydraidp_Requester(ContainerRequesterAsyncContextManager):  # noqa
-
-    async def __aenter__(self):
-        await super().__aenter__()
-        resp = await self.requester(
-            'POST', '/db/guillotina/@addons',
-            data=json.dumps({
-                'id': 'guillotina_hydraidp'
-            })
-        )
-        return self.requester
-
-
 @pytest.fixture(scope='function')
 async def guillotina_hydraidp_requester(guillotina):
-    return guillotina_hydraidp_Requester(guillotina)
+    yield guillotina
+    db = await utils.get_db()
+    async with db.acquire() as conn:
+        await conn.execute('drop table hydra_users')

@@ -1,35 +1,14 @@
 import json
 import os
-import uuid
 
 import aiohttp
-import argon2
+import jsonschema
 from guillotina import app_settings, configure
+from guillotina.auth.validators import check_password
 from guillotina.response import (HTTPBadRequest, HTTPFound, HTTPNotFound,
-                                 HTTPUnauthorized, Response)
+                                 HTTPPreconditionFailed, HTTPUnauthorized,
+                                 Response)
 from guillotina_hydraidp import utils
-from pypika import PostgreSQLQuery as Query
-from pypika import Table
-
-users_table = Table('hydra_users')
-ph = argon2.PasswordHasher()
-
-
-async def get_csrf(request):
-    try:
-        data = await request.json()
-        if 'csrf' in data:
-            return data['csrf']
-    except Exception:
-        pass
-    if 'oauth2_authentication_csrf' in request.cookies:
-        return request.cookies['oauth2_authentication_csrf']
-
-
-async def get_csrf_cookie_str(request):
-    csrf = await get_csrf(request)
-    if csrf:
-        return 'oauth2_authentication_csrf={}'.format(csrf)
 
 
 async def hydra_admin_request(method, path, **kwargs):
@@ -70,23 +49,14 @@ async def post_login(context, request):
     challenge = data['challenge']
     remember = data.get('remember') or False
 
-    query = Query.from_(users_table).select(
-        users_table.id, users_table.username,
-        users_table.password
-    ).where(
-        users_table.username == username
-    )
-    db = await utils.get_db()
-    async with db.acquire() as conn:
-        result = await conn.fetch(str(query))
-        if len(result) == 0:
-            raise HTTPUnauthorized(content={
-                'text': 'login failed'
-            })
-        user = result[0]
+    user = await utils.find_user(username=username)
+    if user is None:
+        raise HTTPUnauthorized(content={
+            'text': 'login failed'
+        })
 
-    if ph.verify(user['password'], pw):
-        csrf_cookie = await get_csrf_cookie_str(request)
+    if check_password(user['password'], pw):
+        csrf_cookie = await utils.get_csrf_cookie_str(request)
         accept_request = await hydra_admin_request(
             'put', os.path.join('login', challenge, 'accept'),
             json={
@@ -133,7 +103,7 @@ async def get_login(context, request):
     login_request = await hydra_admin_request(
         'get', os.path.join('login', challenge),
         headers={
-            'Set-Cookie': await get_csrf_cookie_str(request)
+            'Set-Cookie': await utils.get_csrf_cookie_str(request)
         })
 
     if login_request['skip']:
@@ -144,18 +114,18 @@ async def get_login(context, request):
                 'subject': login_request['subject']
             },
             headers={
-                'Set-Cookie': await get_csrf_cookie_str(request)
+                'Set-Cookie': await utils.get_csrf_cookie_str(request)
             }
         )
         return HTTPFound(
             accept_request['redirect_to'],
             headers={
-                'Set-Cookie': await get_csrf_cookie_str(request)
+                'Set-Cookie': await utils.get_csrf_cookie_str(request)
             })
     return {
         'type': 'login',
         'challenge': challenge,
-        'csrf': await get_csrf(request)
+        'csrf': await utils.get_csrf(request)
     }
 
 
@@ -176,7 +146,7 @@ async def consent(context, request):
     consent_request = await hydra_admin_request(
         'get', os.path.join('consent', challenge),
         headers={
-            'Set-Cookie': await get_csrf_cookie_str(request)
+            'Set-Cookie': await utils.get_csrf_cookie_str(request)
         })
     if consent_request['skip']:
         # already authenticated! skip and return token immediately
@@ -194,13 +164,13 @@ async def consent(context, request):
                 }
             },
             headers={
-                'Set-Cookie': await get_csrf_cookie_str(request)
+                'Set-Cookie': await utils.get_csrf_cookie_str(request)
             }
         )
         return HTTPFound(
             accept_request['redirect_to'],
             headers={
-                'Set-Cookie': await get_csrf_cookie_str(request)
+                'Set-Cookie': await utils.get_csrf_cookie_str(request)
             })
     return {
         'type': 'consent',
@@ -208,7 +178,7 @@ async def consent(context, request):
         'requested_scope': consent_request['requested_scope'],
         'subject': consent_request['subject'],
         'client': consent_request['client'],
-        'csrf': await get_csrf(request)
+        'csrf': await utils.get_csrf(request)
     }
 
 
@@ -223,22 +193,11 @@ async def post_consent(context, request):
     data = await request.json()
     remember = data.get('remember') or False
 
-    query = Query.from_(users_table).select(
-        users_table.id, users_table.username,
-        users_table.email, users_table.phone,
-        users_table.data, users_table.password
-    ).where(
-        users_table.id == data['subject']
-    )
-
-    db = await utils.get_db()
-    async with db.acquire() as conn:
-        result = await conn.fetch(str(query))
-        if len(result) == 0:
-            raise HTTPUnauthorized(content={
-                'text': 'login failed'
-            })
-        user = result[0]
+    user = await utils.find_user(id=data['subject'])
+    if user is None:
+        raise HTTPUnauthorized(content={
+            'text': 'login failed'
+        })
 
     accept_request = await hydra_admin_request(
         'put', os.path.join('consent', data['challenge'], 'accept'),
@@ -254,26 +213,26 @@ async def post_consent(context, request):
                     'username': user['username'],
                     'email': user['email'],
                     'phone': user['phone'],
-                    'data': json.loads(user['data']),
+                    'data': user['data'],
                 }
             },
             'remember': remember,
             'remember_for': 3600
         },
         headers={
-            'Set-Cookie': await get_csrf_cookie_str(request)
+            'Set-Cookie': await utils.get_csrf_cookie_str(request)
         }
     )
     return HTTPFound(
         accept_request['redirect_to'],
         headers={
-            'Set-Cookie': await get_csrf_cookie_str(request)
+            'Set-Cookie': await utils.get_csrf_cookie_str(request)
         })
 
 
 @configure.service(method='DELETE', name='@consent',
                    allow_access=True)
-async def deny_consent(context, request):
+async def del_consent(context, request):
     if 'hydra_admin_url' not in app_settings:
         raise HTTPBadRequest(content={
             'reason': 'hydra_admin_url not configured'
@@ -283,87 +242,107 @@ async def deny_consent(context, request):
     consent_request = await hydra_admin_request(
         'put', os.path.join('consent', data['challenge'], 'reject'),
         headers={
-            'Set-Cookie': await get_csrf_cookie_str(request)
+            'Set-Cookie': await utils.get_csrf_cookie_str(request)
         })
     return consent_request
 
 
 @configure.service(
     method='POST', name='@users',
-    permission='guillotina.ManageAddons')
-async def add_user(context, request):
+    permission='guillotina.ManageAddons',
+    summary='Create user',
+    parameters=[{
+        "name": "body",
+        "in": "body",
+        "schema": {
+            "$ref": "#/definitions/HydraUser"
+        }
+    }],
+    responses={
+        "200": {
+            "schema": {
+                "$ref": "#/definitions/HydraUser"
+            }
+        }
+    })
+async def post_user(context, request):
     data = await request.json()
-    if 'id' not in data:
-        data['id'] = str(uuid.uuid4())
-    data['password'] = ph.hash(
-        data['password'].encode('utf-8'))
-    db = await utils.get_db()
-    query = Query.into(users_table).columns(
-        'id', 'username', 'password', 'email', 'phone', 'data')
-    query = query.insert(
-        data['id'], data['username'], data['password'],
-        data.get('email') or '',
-        data.get('phone') or '',
-        json.dumps(data.get('data') or {}),
-    )
-    async with db.acquire() as conn:
-        await conn.execute(str(query))
+    try:
+        jsonschema.validate(
+            data, app_settings['json_schema_definitions']['HydraUser'])
+    except (jsonschema.ValidationError,
+            jsonschema.SchemaError) as e:
+        raise HTTPPreconditionFailed(content={
+            'message': e.message
+        })
 
+    data = await utils.create_user(**data)
     del data['password']
+    data['@id'] = str(request.url.with_path(f'/@users/{data["id"]}'))
     return data
 
 
 @configure.service(
     method='DELETE', name='@users/{userid}',
-    permission='guillotina.ManageAddons')
+    permission='guillotina.ManageAddons',
+    summary='Delete user',
+    parameters=[{
+        "name": "userid",
+        "in": "path"
+    }])
 async def delete_user(context, request):
-    user_id = request.matchdict['userid']
-    query = Query.from_(users_table).where(
-        users_table.id == user_id
-    )
-    db = await utils.get_db()
-    async with db.acquire() as conn:
-        await conn.execute(str(query.delete()))
+    await utils.remove_user(request.matchdict['userid'])
 
 
 @configure.service(
     method='GET', name='@users',
-    permission='guillotina.ManageAddons')
+    permission='guillotina.ManageAddons',
+    summary='Get users',
+    responses={
+        "200": {
+            "schema": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "$ref": "#/definitions/HydraUser"
+                }
+            }
+        }
+    })
 async def get_users(context, request):
-    query = Query.from_(users_table).select(
-        users_table.id, users_table.username).limit(1000)
-    db = await utils.get_db()
-    async with db.acquire() as conn:
-        result = await conn.fetch(str(query))
-
     output = []
-    for item in result:
+    for item in await utils.find_users():
         output.append({
             'id': item['id'],
-            'username': item['username']
+            'username': item['username'],
+            '@id': str(request.url.with_path(f'/@users/{item["id"]}'))
         })
     return output
 
 
 @configure.service(
     method='GET', name='@users/{userid}',
-    permission='guillotina.ManageAddons')
+    permission='guillotina.ManageAddons',
+    summary='Get user',
+    parameters=[{
+        "name": "userid",
+        "in": "path"
+    }],
+    responses={
+        "200": {
+            "description": "Get user",
+            "schema": {
+                "$ref": "#/definitions/HydraUser"
+            }
+        }
+    })
 async def get_user(context, request):
-    db = await utils.get_db()
-    user_id = request.matchdict['userid']
-    query = Query.from_(users_table).select(
-        users_table.id, users_table.username,
-        users_table.email, users_table.phone,
-        users_table.data
-    ).where(
-        users_table.id == user_id
-    )
-    async with db.acquire() as conn:
-        results = await conn.fetch(str(query))
-        if len(results) > 0:
-            item = dict(results[0])
-            item['data'] = json.loads(item['data'])
-            return item
+    userid = request.matchdict['userid']
+    user = await utils.find_user(id=userid)
+    if user is not None:
+        del user['password']
+        user['@id'] = str(request.url.with_path(f'/@users/{user["id"]}'))
+        return user
     raise HTTPNotFound(content={
-        'reason': f'{user_id} does not exit'
+        'reason': f'{userid} does not exit'
     })
