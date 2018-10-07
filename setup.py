@@ -13,7 +13,7 @@ setup(
     description='Guillotina based identity provider for hydra',
     long_description=README,
     install_requires=[
-        'guillotina',
+        'guillotina>=4.2.10',
         'guillotina_authentication',
         'argon2_cffi',
         'pypika'
