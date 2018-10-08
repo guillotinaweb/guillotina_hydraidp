@@ -4,6 +4,7 @@ import aiohttp
 import jsonschema
 from guillotina import app_settings, configure
 from guillotina.auth.validators import check_password
+from guillotina.interfaces import IApplication
 from guillotina.response import (HTTPBadRequest, HTTPFound, HTTPNotFound,
                                  HTTPPreconditionFailed, HTTPUnauthorized,
                                  Response)
@@ -31,8 +32,8 @@ async def hydra_admin_request(method, path, **kwargs):
             return await resp.json()
 
 
-@configure.service(method='POST', name='@login',
-                   allow_access=True)
+@configure.service(method='POST', name='@hydra-login',
+                   context=IApplication, allow_access=True)
 async def post_login(context, request):
     '''
     After challenge initiated, use this to actually login!
@@ -82,8 +83,8 @@ async def post_login(context, request):
         })
 
 
-@configure.service(method='GET', name='@login',
-                   allow_access=True)
+@configure.service(method='GET', name='@hydra-login',
+                   context=IApplication, allow_access=True)
 async def get_login(context, request):
     '''
     start login challenge from hydra
@@ -128,8 +129,8 @@ async def get_login(context, request):
     }
 
 
-@configure.service(method='GET', name='@consent',
-                   allow_access=True)
+@configure.service(method='GET', name='@hydra-consent',
+                   context=IApplication, allow_access=True)
 async def consent(context, request):
     if 'hydra_admin_url' not in app_settings:
         raise HTTPBadRequest(content={
@@ -181,8 +182,8 @@ async def consent(context, request):
     }
 
 
-@configure.service(method='POST', name='@consent',
-                   allow_access=True)
+@configure.service(method='POST', name='@hydra-consent',
+                   context=IApplication, allow_access=True)
 async def post_consent(context, request):
     if 'hydra_admin_url' not in app_settings:
         raise HTTPBadRequest(content={
@@ -229,8 +230,8 @@ async def post_consent(context, request):
         })
 
 
-@configure.service(method='DELETE', name='@consent',
-                   allow_access=True)
+@configure.service(method='DELETE', name='@hydra-consent',
+                   context=IApplication, allow_access=True)
 async def del_consent(context, request):
     if 'hydra_admin_url' not in app_settings:
         raise HTTPBadRequest(content={
@@ -249,6 +250,7 @@ async def del_consent(context, request):
 @configure.service(
     method='POST', name='@users',
     permission='guillotina.ManageAddons',
+    context=IApplication,
     summary='Create user',
     parameters=[{
         "name": "body",
@@ -284,6 +286,7 @@ async def post_user(context, request):
 @configure.service(
     method='DELETE', name='@users/{userid}',
     permission='guillotina.ManageAddons',
+    context=IApplication,
     summary='Delete user',
     parameters=[{
         "name": "userid",
@@ -296,6 +299,7 @@ async def delete_user(context, request):
 @configure.service(
     method='GET', name='@users',
     permission='guillotina.ManageAddons',
+    context=IApplication,
     summary='Get users',
     responses={
         "200": {
@@ -322,6 +326,7 @@ async def get_users(context, request):
 @configure.service(
     method='GET', name='@users/{userid}',
     permission='guillotina.ManageAddons',
+    context=IApplication,
     summary='Get user',
     parameters=[{
         "name": "userid",

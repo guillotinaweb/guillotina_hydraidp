@@ -59,23 +59,23 @@ def test_auth_flow():
     session = requests.Session()
     resp = session.get('http://localhost:8080/@authenticate/hydra')
 
-    # should then be redirects to @login
+    # should then be redirects to @hydra-login
     assert resp.status_code == 200
-    assert resp.url.startswith('http://localhost:8080/@login')
+    assert resp.url.startswith('http://localhost:8080/@hydra-login')
 
     data = resp.json()
     data.update({
         'username': 'foobar',
         'password': 'foobar'
     })
-    resp = session.post('http://localhost:8080/@login', json=data)
+    resp = session.post('http://localhost:8080/@hydra-login', json=data)
 
-    # should then redirect to @consent
+    # should then redirect to @hydra-consent
     assert resp.status_code == 200
-    assert resp.url.startswith('http://localhost:8080/@consent')
+    assert resp.url.startswith('http://localhost:8080/@hydra-consent')
 
     data = resp.json()
-    resp = session.post('http://localhost:8080/@consent', json={
+    resp = session.post('http://localhost:8080/@hydra-consent', json={
         "challenge": data["challenge"],
         "requested_scope": data['requested_scope'],
         "subject": data["subject"],

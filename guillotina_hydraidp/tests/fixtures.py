@@ -1,9 +1,7 @@
-import aiohttp
 import pytest
 from guillotina import testing
 from guillotina.tests.fixtures import annotations
 from guillotina_hydraidp import utils
-from guillotina_hydraidp.tests.containers import start_hydra
 
 
 def base_settings_configurator(settings):

@@ -13,10 +13,10 @@ Endpoints:
  - POST /@users {'id', 'username', 'password', 'phone', 'email', 'data'}
  - DELETE /@users/{userid}
  - GET /@users/{userid}
- - GET /@login
- - POST /@login
- - GET /@consent
- - POST /@consent
+ - GET /@hydra-login
+ - POST /@hydra-login
+ - GET /@hydra-consent
+ - POST /@hydra-consent
 
 
 Trying it out
@@ -25,8 +25,8 @@ Trying it out
 Tests require a hydra instance to be running with the following configuration:
 
     - OAUTH2_ISSUER_URL=http://localhost:4444
-    - OAUTH2_CONSENT_URL=http://localhost:8080/@consent
-    - OAUTH2_LOGIN_URL=http://localhost:8080/@login
+    - OAUTH2_CONSENT_URL=http://localhost:8080/@hydra-consent
+    - OAUTH2_LOGIN_URL=http://localhost:8080/@hydra-login
     - DATABASE_URL=postgres://hydra:secret@postgresd:5432/hydra?sslmode=disable
     - SYSTEM_SECRET=youReallyNeedToChangeThis
     - OAUTH2_SHARE_ERROR_DEBUG=1
