@@ -33,7 +33,7 @@ class HydraDBUserIdentifier(OAuthClientIdentifier):
             user_id=user_data['username'],
             properties=user_data['data'])
         user.password = user_data['password']
-        # in oauth context, user can choose to only great subset of all
+        # in oauth context, user can choose to only grant subset of all
         # available. In this context, we give them access to everything
         # on the container
         self.apply_scope(user, {
