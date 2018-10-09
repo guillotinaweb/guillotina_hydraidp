@@ -16,6 +16,7 @@ _users_schema = {
     'password': f'VARCHAR(512) NOT NULL UNIQUE',
     'email': f'VARCHAR(255) UNIQUE',
     'phone': f'VARCHAR(30) UNIQUE',
+    'allowed_scopes': f'JSONB',
     'data': 'JSONB'
 }
 
@@ -25,6 +26,7 @@ _initialize_statements = [
     'CREATE INDEX IF NOT EXISTS user_username ON hydra_users (username);',
     'CREATE INDEX IF NOT EXISTS user_email ON hydra_users (email);',
     'CREATE INDEX IF NOT EXISTS user_phone ON hydra_users (phone);',
+    'CREATE INDEX IF NOT EXISTS user_gin_idx ON hydra_users USING gin (allowed_scopes jsonb_path_ops);',  # noqa
 ]
 
 

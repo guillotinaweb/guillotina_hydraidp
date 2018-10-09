@@ -70,13 +70,39 @@ async def create_user(**data):
     data['password'] = hash_password(data['password'], algorithm='argon2')
     db = await get_db()
     query = Query.into(users_table).columns(
-        'id', 'username', 'password', 'email', 'phone', 'data')
+        'id', 'username', 'password', 'email', 'phone',
+        'data', 'allowed_scopes')
     query = query.insert(
         data['id'], data['username'], data['password'],
         data.get('email') or '',
         data.get('phone') or '',
         json.dumps(data.get('data') or {}),
+        json.dumps(data.get('allowed_scopes') or []),
     )
+    async with db.acquire() as conn:
+        await conn.execute(str(query))
+
+    return data
+
+
+async def update_user(**data):
+    userid = data['id']
+    if 'password' in data:
+        data['password'] = hash_password(
+            data['password'], algorithm='argon2')
+    db = await get_db()
+    query = Query.update(users_table).where(
+        users_table.id == userid
+    )
+    for key, value in data.items():
+        if key in ('id', '@id'):
+            continue
+        if key in ('data', 'allowed_scopes'):
+            value = json.dumps(value)
+        try:
+            query = query.set(getattr(users_table, key), value)
+        except AttributeError:
+            pass
     async with db.acquire() as conn:
         await conn.execute(str(query))
 
@@ -113,7 +139,8 @@ async def find_user(**filters):
     query = Query.from_(users_table).select(
         users_table.id, users_table.username,
         users_table.email, users_table.phone,
-        users_table.password, users_table.data
+        users_table.password, users_table.data,
+        users_table.allowed_scopes
     ).limit(1)
     for key, value in filters.items():
         query = query.where(
@@ -125,4 +152,5 @@ async def find_user(**filters):
         if len(result) > 0:
             data = dict(result[0])
             data['data'] = json.loads(data['data'])
+            data['allowed_scopes'] = json.loads(data['allowed_scopes'])
             return data

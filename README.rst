@@ -10,7 +10,7 @@ It also implements the login and consent flow for hydra.
 Endpoints:
 
  - GET /@users
- - POST /@users {'id', 'username', 'password', 'phone', 'email', 'data'}
+ - POST /@users {'id', 'username', 'password', 'phone', 'email', 'data', 'allowed_scopes'}
  - DELETE /@users/{userid}
  - GET /@users/{userid}
  - GET /@hydra-login
@@ -92,3 +92,17 @@ for an example on using the flow.
 
 
 This is just the API implementation. You will still need to implement the frontend!
+
+
+Scope format
+------------
+
+Use scopes to grant access to guillotina containers.
+
+The format of scopes is: `[container id]:[type]:[value]`.
+
+For example, to give the user access to container `cms` as a user, the scope would be `cms:role:guillotina.Member`
+
+Other examples:
+- `cms:role:guillotina.Reader`
+- `cms:permission:guillotina.AccessContent`

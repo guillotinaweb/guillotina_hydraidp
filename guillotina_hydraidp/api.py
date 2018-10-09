@@ -199,6 +199,8 @@ async def post_consent(context, request):
             'text': 'login failed'
         })
 
+    # XXX check valid scopes
+
     accept_request = await hydra_admin_request(
         'put', os.path.join('consent', data['challenge'], 'accept'),
         json={
@@ -214,6 +216,7 @@ async def post_consent(context, request):
                     'email': user['email'],
                     'phone': user['phone'],
                     'data': user['data'],
+                    'allowed_scopes': user['allowed_scopes'],
                 }
             },
             'remember': remember,
@@ -279,6 +282,35 @@ async def post_user(context, request):
 
     data = await utils.create_user(**data)
     del data['password']
+    data['@id'] = str(request.url.with_path(f'/@users/{data["id"]}'))
+    return data
+
+
+@configure.service(
+    method='PATCH', name='@users/{id}',
+    permission='guillotina.ManageAddons',
+    context=IApplication,
+    summary='Update user',
+    parameters=[{
+        "name": "body",
+        "in": "body",
+        "schema": {
+            "$ref": "#/definitions/HydraUser"
+        }
+    }],
+    responses={
+        "200": {
+            "schema": {
+                "$ref": "#/definitions/HydraUser"
+            }
+        }
+    })
+async def update_user(context, request):
+    data = await request.json()
+    data['id'] = request.matchdict['id']
+    data = await utils.update_user(**data)
+    if 'password' in data:
+        del data['password']
     data['@id'] = str(request.url.with_path(f'/@users/{data["id"]}'))
     return data
 

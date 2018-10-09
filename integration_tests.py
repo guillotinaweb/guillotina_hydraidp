@@ -9,6 +9,7 @@ import requests
 CLIENT_DATA = {
     "client_id": "auth-code-client",
     "client_name": "",
+    "client_secret": "secret",
     "redirect_uris": [
         "http://localhost:8080/@callback/hydra"
     ],
@@ -41,8 +42,12 @@ CLIENT_DATA = {
 def test_auth_flow():
 
     # setup #1: client
-    requests.put('http://localhost:4445/clients/auth-code-client',
-                 json=CLIENT_DATA)
+    resp = requests.put('http://localhost:4445/clients/auth-code-client',
+                        json=CLIENT_DATA)
+    if resp.status_code == 404:
+        resp = requests.post('http://localhost:4445/clients',
+                             json=CLIENT_DATA)
+        assert resp.status_code == 201
 
     # setup #2: user/password
     requests.delete('http://localhost:8080/@users/foobar',
@@ -51,7 +56,11 @@ def test_auth_flow():
                   json={
                       'id': 'foobar',
                       'username': 'foobar',
-                      'password': 'foobar'
+                      'password': 'foobar',
+                      'allowed_scopes': ['cms:role:guillotina.Member'],
+                      'data': {
+                          'foo': 'bar'
+                      }
                   },
                   auth=('root', 'root'))
 

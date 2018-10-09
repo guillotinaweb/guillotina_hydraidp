@@ -25,7 +25,10 @@ configure.json_schema_definition('HydraUser', {
         },
         "data": {
             "type": "object"
+        },
+        "allowed_scopes": {
+            "type": "array"
         }
     },
-    'required': ['id', 'username', 'password']
+    'required': ['username', 'password']
 })
