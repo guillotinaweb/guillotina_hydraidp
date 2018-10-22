@@ -1,6 +1,9 @@
 1.0.1 (unreleased)
 ------------------
 
+- be able to work as a regular login endpoint
+  [vangheem]
+
 - provide angular login app
   [bloodbare]
 
