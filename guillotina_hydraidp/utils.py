@@ -1,6 +1,8 @@
 import json
+import logging
 import uuid
 
+import aiohttp
 import argon2
 import asyncpg
 from guillotina import app_settings, configure
@@ -10,6 +12,9 @@ from guillotina.interfaces import (IApplication, IPasswordChecker,
                                    IPasswordHasher)
 from pypika import PostgreSQLQuery as Query
 from pypika import Table
+
+
+logger = logging.getLogger(__name__)
 
 users_table = Table('hydra_users')
 ph = argon2.PasswordHasher()
@@ -33,7 +38,7 @@ def argon_pw_checker(token, pw):
 
 
 async def get_db():
-    db_config = app_settings['hydra_db']
+    db_config = app_settings['hydra']['db']
     if db_config is None:
         return
     if not db_config.get('dsn'):
@@ -55,19 +60,30 @@ async def get_csrf(request):
     except Exception:
         pass
     if 'oauth2_authentication_csrf' in request.cookies:
-        return request.cookies['oauth2_authentication_csrf']
+        val = request.cookies['oauth2_authentication_csrf']
+        try:
+            val = val.value
+        except AttributeError:
+            pass
+        return val
+    return ''
 
 
 async def get_csrf_cookie_str(request):
     csrf = await get_csrf(request)
     if csrf:
         return 'oauth2_authentication_csrf={}'.format(csrf)
+    return ''
 
 
 async def create_user(**data):
     if 'id' not in data:
         data['id'] = str(uuid.uuid4())
     data['password'] = hash_password(data['password'], algorithm='argon2')
+
+    if data.get('email'):
+        data['email'] = data['email'].lower()
+
     db = await get_db()
     query = Query.into(users_table).columns(
         'id', 'username', 'password', 'email', 'phone',
@@ -87,9 +103,13 @@ async def create_user(**data):
 
 async def update_user(**data):
     userid = data['id']
-    if 'password' in data:
+    if data.get('password'):
         data['password'] = hash_password(
             data['password'], algorithm='argon2')
+
+    if data.get('email'):
+        data['email'] = data['email'].lower()
+
     db = await get_db()
     query = Query.update(users_table).where(
         users_table.id == userid
@@ -154,3 +174,23 @@ async def find_user(**filters):
             data['data'] = json.loads(data['data'])
             data['allowed_scopes'] = json.loads(data['allowed_scopes'])
             return data
+
+
+async def validate_recaptcha(recaptcha_response):
+    async with aiohttp.ClientSession() as session:
+        async with await session.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data=dict(
+                secret=app_settings["recaptcha"]["private"],
+                response=recaptcha_response,
+            ),
+        ) as resp:
+            try:
+                data = await resp.json()
+            except Exception:  # pragma: no cover
+                logger.warning("Did not get json response", exc_info=True)
+                return
+            try:
+                return data["success"]
+            except Exception:  # pragma: no cover
+                return False

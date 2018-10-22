@@ -1,0 +1,40 @@
+<div fxLayout="row wrap" fxLayoutAlign="space-around center">
+	<mat-card class="concent-card">
+		<mat-card-header fxLayout="row wrap" fxLayoutAlign="space-around center">
+	    	<mat-card-title *ngIf="consent_data">
+				Hi {{consent_data.user.username}}, application
+				<strong>{{consent_data.client.client_name || consent_data.client.client_id}}</strong>
+				wants access resources on your behalf and to:
+	    	</mat-card-title>
+	  	</mat-card-header> 
+	  	<mat-card-content [formGroup]="consentForm" *ngIf="consent_data">
+
+  			<mat-selection-list (selectionChange)="selectionChange($event.option)" >
+			    <mat-list-option 
+			    		*ngFor="let scope of consent_data.requested_scope; let i = index"
+			    		checkboxPosition="before"
+			    		[value]="i"
+			    		[selected]="consentForm.get('request_scope').value[i]">
+			    	<mat-icon matListIcon>security</mat-icon>
+			    	{{scope}}
+	  			</mat-list-option>	
+  			</mat-selection-list>
+
+			<p>
+	            Do you want to be asked next time when this application wants to access your data? The application will not be able to ask for more permissions without your consent.
+			</p>
+
+			<ul *ngIf="consent_data">
+				<li><a href="{{consent_data.client.policy_uri}}">Policy</a></li>
+				<li><a href="{{consent_data.client.tos_uri}}">Terms of Service</a></li>
+			</ul>
+
+			<mat-checkbox class="remember_checkbox" formControlName="remember">Remember me</mat-checkbox>
+			<mat-spinner [style.display]="submitted ? 'block' : 'none'"></mat-spinner>
+	  	</mat-card-content>
+		<mat-card-actions fxLayout="row wrap" fxLayoutAlign="space-around center">
+			<button  mat-raised-button [disabled]="loading" color="second" (click)="aprove()">Allow access</button>
+			<button  mat-raised-button [disabled]="loading" color="primary" (click)="deny()">Deny access</button>
+		</mat-card-actions>
+	</mat-card>
+</div>

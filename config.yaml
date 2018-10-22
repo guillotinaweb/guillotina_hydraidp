@@ -49,10 +49,16 @@ auth_providers:
     state: true
     scope: openid offline
 # could be pg or cockroach
-hydra_db:
-  # dsn: postgres://hydra:secret@localhost:5432/hydra
-  dsn: postgres://guillotina@localhost:5432/guillotina
-  pool_size: 20
-
-# hydra admin url should be internal, protected!
-hydra_admin_url: http://localhost:4445/
+hydra:
+  db:
+    # dsn: postgres://hydra:secret@localhost:5432/hydra
+    dsn: postgres://guillotina@localhost:5432/guillotina
+    pool_size: 20
+  # hydra admin url should be internal, protected!
+  admin_url: http://localhost:4445/
+  allow_registration: false
+  granted_scopes:
+    - role:guillotina.Member
+recaptcha:
+  private: null
+  public: null

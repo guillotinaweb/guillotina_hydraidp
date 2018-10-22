@@ -18,7 +18,7 @@ setup(
     long_description=README,
     install_requires=[
         'guillotina>=4.2.10',
-        'guillotina_authentication',
+        'guillotina_authentication>=1.0.3',
         'argon2_cffi',
         'pypika'
     ],
@@ -29,10 +29,12 @@ setup(
     include_package_data=True,
     tests_require=[
         'pytest',
+        'aioresponses'
     ],
     extras_require={
         'test': [
-            'pytest'
+            'pytest',
+            'aioresponses'
         ]
     },
     classifiers=[],

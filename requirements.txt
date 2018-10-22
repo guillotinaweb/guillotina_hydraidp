@@ -1,0 +1,6 @@
+guillotina>=4.2.10
+guillotina-rediscache==2.0.3
+guillotina-swagger
+guillotina_authentication
+argon2_cffi
+pypika

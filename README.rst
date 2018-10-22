@@ -17,10 +17,18 @@ Endpoints:
  - POST /@hydra-login
  - GET /@hydra-consent
  - POST /@hydra-consent
+ - POST /@hydra-join
+ - GET /@hydra-user
+ - PATCH /@hydra-user
 
+Configuring
+-----------
 
-Trying it out
--------------
+Configuration depends on your frontend login implementation. Using an application
+that renders html and can be the auth endpoint as well makes the flow more simple.
+
+See the angular app example in the repo and integration test flow to see how
+it can work.
 
 Tests require a hydra instance to be running with the following configuration:
 
@@ -46,11 +54,15 @@ Then you need to configure guillotina::
           access_token_url: http://localhost:4444/oauth2/token
         state: true
         scope: openid offline
-    hydra_db:
-      dsn: postgres://hydra:secret@localhost:5432/hydra
-      pool_size: 20
-    # hydra admin url should be internal, protected!
-    hydra_admin_url: http://localhost:4445/
+    hydra:
+      db:
+        dsn: postgres://hydra:secret@localhost:5432/hydra
+        pool_size: 20
+      # hydra admin url should be internal, protected!
+      admin_url: http://localhost:4445/
+      allow_registration: false
+    recaptcha_private_key: null
+    recaptcha_public_key: null
 
 
 To add an oauth client to hydra::
@@ -106,3 +118,26 @@ For example, to give the user access to container `cms` as a user, the scope wou
 Other examples:
 - `cms:role:guillotina.Reader`
 - `cms:permission:guillotina.AccessContent`
+
+
+Develop Frontend
+----------------
+
+Start persistent layers::
+
+    docker-compose up redis postgres hydra-migrate hydra hydra-proxy
+
+Start idp::
+
+    virtualenv .
+    source bin/activate
+    g -c config-pg.yaml
+
+Start ngapp::
+
+    cd loginapp
+    ng serve
+
+Open browser::
+
+    http://localhost:4200

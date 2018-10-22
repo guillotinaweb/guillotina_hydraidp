@@ -4,12 +4,20 @@ from guillotina import configure
 app_settings = {
     'applications': ['guillotina_authentication'],
     # provide custom application settings here...
-    'hydra_db': None,
-    'hydra_admin_url': None,
     'auth_user_identifiers': [
         'guillotina_authentication.identifier.OAuthClientIdentifier',
         'guillotina_hydraidp.identifier.HydraDBUserIdentifier'
-    ]
+    ],
+    'hydra': {
+        'db': None,
+        'admin_url': None,
+        'allow_registration': False,
+        'granted_scopes': []
+    },
+    'recaptcha': {
+        'public': None,
+        'private': None,
+    }
 }
 
 

@@ -10,12 +10,19 @@ def base_settings_configurator(settings):
     else:
         settings['applications'] = ['guillotina_hydraidp']
 
-    settings['hydra_db'] = {
-        'dsn': 'postgres://postgres:@{}:{}/guillotina'.format(
-            annotations.get('pg_host', 'localhost'),
-            annotations.get('pg_port', 5432),
-        ),
-        'pool_size': 10
+    settings['hydra'] = {
+        'db': {
+            'dsn': 'postgres://postgres:@{}:{}/guillotina'.format(
+                annotations.get('pg_host', 'localhost'),
+                annotations.get('pg_port', 5432),
+            ),
+            'pool_size': 10
+        },
+        'allow_registration': True
+    }
+    settings['recaptcha'] = {
+        'public': 'foobar',
+        'private': 'foobar'
     }
 
 

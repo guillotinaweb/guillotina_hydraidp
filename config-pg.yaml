@@ -1,0 +1,76 @@
+---
+aiohttp_settings:
+  client_max_size: 20971520
+databases:
+- db:
+    storage: postgresql
+    transaction_strategy: dbresolve_readcommitted
+    dsn: postgresql://postgres:secret@localhost:5432/guillotina
+    read_only: false
+    pool_size: 100
+applications:
+- guillotina_hydraidp
+- guillotina_rediscache
+address: 8080
+static:
+- swagger_static: guillotina_swagger:static
+root_user:
+  password: root
+auth_extractors:
+- guillotina.auth.extractors.BearerAuthPolicy
+- guillotina.auth.extractors.BasicAuthPolicy
+- guillotina.auth.extractors.WSTokenAuthPolicy
+auth_token_validators:
+- guillotina.auth.validators.SaltedHashPasswordValidator
+- guillotina.auth.validators.JWTValidator
+redis:
+  host: "localhost"
+  port: 6379
+jwt:
+  secret: secret
+  algorithm: HS256
+jsapps:
+  +admin: guillotina:static/executioner
+cors:
+  allow_origin:
+  - "http://localhost:4200"
+  - "http://localhost:5443"
+  allow_methods:
+  - GET
+  - POST
+  - DELETE
+  - HEAD
+  - PATCH
+  - OPTIONS
+  - PUT
+  allow_headers:
+  - "*"
+  expose_headers:
+  - "*"
+  allow_credentials: true
+  max_age: 3660
+auth_providers:
+  hydra:
+    configuration:
+      client_id: auth-code-client
+      client_secret: secret
+      base_url: http://localhost:5444/
+      authorize_url: http://localhost:5444/oauth2/auth
+      access_token_url: http://localhost:5444/oauth2/token
+    state: true
+    scope: openid offline
+# could be pg or cockroach
+hydra:
+  db:
+    # dsn: postgres://hydra:secret@localhost:5432/hydra
+    dsn: postgresql://postgres:secret@localhost:5432/guillotina
+    pool_size: 20
+  # hydra admin url should be internal, protected!
+  admin_url: http://localhost:4445/
+  allow_registration: false
+  # scopes automatically granted when using as straight login endpoint
+  granted_scopes:
+    - role:guillotina.Member
+recaptcha:
+  private: null
+  public: null

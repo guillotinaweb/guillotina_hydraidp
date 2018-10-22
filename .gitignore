@@ -1,0 +1,7 @@
+/bin
+/lib
+/include
+*.egg-info
+node-modules
+__pycache__
+pip-selfcheck.json

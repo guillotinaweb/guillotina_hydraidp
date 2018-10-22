@@ -1,0 +1,16 @@
+<div fxLayout="row wrap" fxLayoutAlign="space-around center">
+	<mat-card class="profile-card">
+		<mat-card-header fxLayout="row wrap" fxLayoutAlign="space-around center">
+	    	<mat-card-title>
+				Welcome ({{userService.username}}) {{userService.first_name}} {{userService.last_name}}!
+	    	</mat-card-title>
+	  	</mat-card-header> 
+	  	<mat-card-content [formGroup]="profileForm">
+
+	  	</mat-card-content>
+		<mat-card-actions fxLayout="row wrap" fxLayoutAlign="space-around center">
+			<button  mat-raised-button [disabled]="loading" color="second" (click)="save()">Cancel</button>
+			<button  mat-raised-button [disabled]="loading" color="primary" (click)="cancel()">Save</button>
+		</mat-card-actions>
+	</mat-card>
+</div>
