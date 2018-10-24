@@ -441,6 +441,9 @@ async def post_user(context, request):
                 },
                 "recaptcha": {
                     "type": "string"
+                },
+                "encrypted": {
+                    "type": "string"
                 }
             },
             "required": ["username", "password", "email"]
@@ -452,11 +455,20 @@ async def join(context, request):
             'reason': 'registration is not allowed'
         })
     data = await request.json()
-    if app_settings['recaptcha']['private']:
-        if not await utils.validate_recaptcha(data['recaptcha']):
-            raise HTTPPreconditionFailed(content={
-                'reason': 'invalid recaptcha'
-            })
+    validated = False
+    if 'encrypted' in data and data['encrypted']:
+        data = await utils.validate_payload(data['encrypted'].encode('utf-8'))
+        if data:
+            validated = True
+    elif app_settings['recaptcha']['private']:
+        if data['recaptcha'] not in (None, '') and \
+                await utils.validate_recaptcha(data['recaptcha']):
+            validated = True
+
+    if not(validated):
+        raise HTTPPreconditionFailed(content={
+            'reason': 'invalid client validation'
+        })
     if 'id' in data:
         del data['id']
     data = await utils.create_user(**data)

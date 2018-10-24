@@ -17,7 +17,8 @@ app_settings = {
     'recaptcha': {
         'public': None,
         'private': None,
-    }
+    },
+    'registration_key': None
 }
 
 

@@ -12,7 +12,7 @@ def base_settings_configurator(settings):
 
     settings['hydra'] = {
         'db': {
-            'dsn': 'postgres://postgres:@{}:{}/guillotina'.format(
+            'dsn': 'postgres://postgres:secret@{}:{}/guillotina'.format(
                 annotations.get('pg_host', 'localhost'),
                 annotations.get('pg_port', 5432),
             ),
