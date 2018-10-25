@@ -1,7 +1,8 @@
 1.0.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Join RSA pub key
+  [bloodbare]
 
 
 1.0.1 (2018-10-22)
