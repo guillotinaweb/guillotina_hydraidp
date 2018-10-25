@@ -12,7 +12,7 @@ def base_settings_configurator(settings):
 
     settings['hydra'] = {
         'db': {
-            'dsn': 'postgres://postgres:@{}:{}/guillotina'.format(
+            'dsn': 'postgres://postgres:secret@{}:{}/guillotina'.format(
                 annotations.get('pg_host', 'localhost'),
                 annotations.get('pg_port', 5432),
             ),
@@ -30,8 +30,9 @@ testing.configure_with(base_settings_configurator)
 
 
 @pytest.fixture(scope='function')
-async def guillotina_hydraidp_requester(guillotina):
+async def guillotina_hydraidp_requester(guillotina, loop):
     yield guillotina
-    db = await utils.get_db()
-    async with db.acquire() as conn:
-        await conn.execute('drop table hydra_users')
+    import asyncio
+    conn = await utils.get_conn(asyncio.get_event_loop())
+    await conn.execute('drop table hydra_users;')
+    await conn.close()

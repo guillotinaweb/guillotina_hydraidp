@@ -44,6 +44,20 @@ services:
     networks:
       - postgres
 
+  postgres-test:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+        POSTGRES_INITDB_ARGS: --data-checksums
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: secret
+        POSTGRES_DB: guillotina
+    volumes:
+    - postgres_data_cms:/var/lib/postgresql/data
+    command: postgres -c tcp_keepalives_idle=600 -c tcp_keepalives_interval=30 -c tcp_keepalives_count=10
+    networks:
+      - postgres
   hydra-migrate:
     image: oryd/hydra:v1.0.0-beta.9
     environment:

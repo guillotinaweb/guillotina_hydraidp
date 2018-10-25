@@ -12,6 +12,8 @@ from guillotina.interfaces import (IApplication, IPasswordChecker,
                                    IPasswordHasher)
 from pypika import PostgreSQLQuery as Query
 from pypika import Table
+from Crypto.PublicKey import RSA
+from guillotina import jose
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ users_table = Table('hydra_users')
 ph = argon2.PasswordHasher()
 
 DB_ATTR = '_hydraidp_db_pool'
+REGISTRATION_KEY = None
 
 
 @configure.utility(provides=IPasswordHasher, name='argon2')
@@ -37,7 +40,7 @@ def argon_pw_checker(token, pw):
         return False
 
 
-async def get_db():
+async def get_db(loop=None):
     db_config = app_settings['hydra']['db']
     if db_config is None:
         return
@@ -47,9 +50,19 @@ async def get_db():
     if not hasattr(root, DB_ATTR):
         setattr(root, DB_ATTR, await asyncpg.create_pool(
             dsn=db_config['dsn'],
+            loop=loop,
             max_size=db_config.get('pool_size', 20),
             min_size=2))
     return getattr(root, DB_ATTR)
+
+
+async def get_conn(loop=None):
+    db_config = app_settings['hydra']['db']
+    if db_config is None:
+        return
+    if not db_config.get('dsn'):
+        return
+    return await asyncpg.connect(db_config.get('dsn'), loop=loop)
 
 
 async def get_csrf(request):
@@ -194,3 +207,20 @@ async def validate_recaptcha(recaptcha_response):
                 return data["success"]
             except Exception:  # pragma: no cover
                 return False
+
+
+async def validate_payload(payload):
+    global REGISTRATION_KEY
+    if REGISTRATION_KEY is None and app_settings['registration_key']:
+        REGISTRATION_KEY = {'k': RSA.importKey(app_settings['registration_key'])}  # noqa
+    try:
+        jwt = jose.decrypt(
+            jose.deserialize_compact(payload), REGISTRATION_KEY)
+        return jwt.claims
+    except jose.Expired:
+        # expired token
+        logger.warn(f'Expired token {payload}', exc_info=True)
+        return
+    except jose.Error:
+        logger.warn(f'Error decrypting JWT token', exc_info=True)
+        return

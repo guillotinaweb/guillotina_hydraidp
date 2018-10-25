@@ -61,3 +61,31 @@ async def test_join(guillotina_hydraidp_requester):
 
         resp, status = await requester('GET', '/@users')
         assert len(resp) == 1
+
+
+async def test_join_jwe(guillotina_hydraidp_requester):
+    requester = guillotina_hydraidp_requester
+
+    from guillotina_hydraidp import utils
+    from Crypto.PublicKey import RSA
+    from guillotina import jose
+
+    key = RSA.generate(2048)
+    pub_jwk = key.publickey().exportKey('PEM')
+    priv_jwk = key.exportKey('PEM')
+    utils.REGISTRATION_KEY = {'k': priv_jwk}
+
+    payload = {
+        'username': 'foobar',
+        'password': 'foobar'
+    }
+
+    jwe = jose.encrypt(payload, {'k': pub_jwk})
+    token = jose.serialize_compact(jwe).decode('utf-8')
+
+    resp, status = await requester('POST', '/@hydra-join', data=json.dumps(
+        {'encrypted': token}))
+    assert status == 200
+
+    resp, status = await requester('GET', '/@users')
+    assert len(resp) == 1

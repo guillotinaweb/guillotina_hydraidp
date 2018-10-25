@@ -14,8 +14,8 @@ _users_schema = {
     'id': f'VARCHAR({MAX_OID_LENGTH}) NOT NULL PRIMARY KEY',
     'username': f'VARCHAR(255) NOT NULL UNIQUE',
     'password': f'VARCHAR(512) NOT NULL UNIQUE',
-    'email': f'VARCHAR(255) UNIQUE',
-    'phone': f'VARCHAR(30) UNIQUE',
+    'email': f'VARCHAR(255) NULL UNIQUE',
+    'phone': f'VARCHAR(30) NULL',
     'allowed_scopes': f'JSONB',
     'data': 'JSONB'
 }
@@ -32,7 +32,7 @@ _initialize_statements = [
 
 @configure.subscriber(for_=IApplicationInitializedEvent)
 async def initialize(event):
-    db = await utils.get_db()
+    db = await utils.get_db(event.loop)
     if db is None:
         return
 
