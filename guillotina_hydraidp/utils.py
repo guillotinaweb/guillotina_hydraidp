@@ -40,7 +40,7 @@ def argon_pw_checker(token, pw):
         return False
 
 
-async def get_db():
+async def get_db(loop=None):
     db_config = app_settings['hydra']['db']
     if db_config is None:
         return
@@ -50,9 +50,19 @@ async def get_db():
     if not hasattr(root, DB_ATTR):
         setattr(root, DB_ATTR, await asyncpg.create_pool(
             dsn=db_config['dsn'],
+            loop=loop,
             max_size=db_config.get('pool_size', 20),
             min_size=2))
     return getattr(root, DB_ATTR)
+
+
+async def get_conn(loop=None):
+    db_config = app_settings['hydra']['db']
+    if db_config is None:
+        return
+    if not db_config.get('dsn'):
+        return
+    return await asyncpg.connect(db_config.get('dsn'), loop=loop)
 
 
 async def get_csrf(request):
@@ -204,8 +214,8 @@ async def validate_payload(payload):
     if REGISTRATION_KEY is None and app_settings['registration_key']:
         REGISTRATION_KEY = {'k': RSA.importKey(app_settings['registration_key'])}  # noqa
     try:
-        jwt = jose.verify(
-            jose.deserialize_compact(payload), REGISTRATION_KEY, 'HS256')
+        jwt = jose.decrypt(
+            jose.deserialize_compact(payload), REGISTRATION_KEY)
         return jwt.claims
     except jose.Expired:
         # expired token

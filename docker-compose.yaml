@@ -55,6 +55,7 @@ services:
         POSTGRES_DB: guillotina
     volumes:
     - postgres_data_cms:/var/lib/postgresql/data
+    command: postgres -c tcp_keepalives_idle=600 -c tcp_keepalives_interval=30 -c tcp_keepalives_count=10
     networks:
       - postgres
   hydra-migrate:

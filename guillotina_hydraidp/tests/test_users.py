@@ -80,7 +80,7 @@ async def test_join_jwe(guillotina_hydraidp_requester):
         'password': 'foobar'
     }
 
-    jwe = jose.sign(payload, {'k': priv_jwk})
+    jwe = jose.encrypt(payload, {'k': pub_jwk})
     token = jose.serialize_compact(jwe).decode('utf-8')
 
     resp, status = await requester('POST', '/@hydra-join', data=json.dumps(
