@@ -131,7 +131,8 @@ async def _login_user(request, accept_data, user):
     # log user in directly now
     async with aiohttp.ClientSession() as session:
         csrf = await utils.get_csrf_cookie_str(request)
-        async with session.get(accept_data['redirect_to'], headers={
+        async with session.get(
+                accept_data['redirect_to'], headers={
                     'Cookie': csrf
                 }, allow_redirects=False) as resp:
             assert resp.status == 302
@@ -163,7 +164,8 @@ async def _login_user(request, accept_data, user):
             )
 
             auth_url = URL(accept_request['redirect_to'])
-            async with session.get(auth_url, headers={
+            async with session.get(
+                    auth_url, headers={
                         'Cookie': csrf
                     }, allow_redirects=False) as resp:
                 url = URL(resp.headers['Location'])
