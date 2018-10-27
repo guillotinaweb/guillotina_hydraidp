@@ -1,0 +1,38 @@
+# we want to make sure it is run on trusty where sudo is provided for postgres
+dist: trusty
+language: python
+python:
+    - "3.6"
+sudo: required
+
+services:
+  - postgresql
+  - docker
+# make sure we're on the latest version of postgresql
+addons:
+  postgresql: "9.6"
+before_script:
+  - psql -c 'create database guillotina;' -U postgres
+
+cache:
+  directories:
+    - eggs
+install:
+  - pip install Cython==0.27.3
+  - pip install -r requirements.txt
+  - pip install -r requirements-test.txt
+  - pip install -e .[test]
+  - pip install flake8 codecov mypy
+  - sleep 5
+script:
+  - flake8 guillotina --config=setup.cfg
+  - mypy guillotina/
+  - pytest -s --cov=guillotina -s --tb=native -v --cov-report term-missing --cov-append guillotina
+after_success:
+  - codecov
+
+deploy:
+  provider: script
+  script: bash docker_push
+  on:
+    tags: true

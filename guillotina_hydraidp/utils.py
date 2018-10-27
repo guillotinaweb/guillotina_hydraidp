@@ -14,6 +14,10 @@ from pypika import PostgreSQLQuery as Query
 from pypika import Table
 from Crypto.PublicKey import RSA
 from guillotina import jose
+from guillotina.event import notify
+from guillotina_hydraidp.events import UserCreatedEvent
+from guillotina_hydraidp.events import UserModifiedEvent
+from guillotina_hydraidp.events import UserRemovedEvent
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +115,13 @@ async def create_user(**data):
     async with db.acquire() as conn:
         await conn.execute(str(query))
 
+    await notify(UserCreatedEvent(
+        data['id'],
+        data['email'],
+        data['username'],
+        data.get('data', {}),
+        data.get('allowed_scopes', [])
+    ))
     return data
 
 
@@ -139,6 +150,7 @@ async def update_user(**data):
     async with db.acquire() as conn:
         await conn.execute(str(query))
 
+    await notify(UserModifiedEvent(userid, data))
     return data
 
 
@@ -154,6 +166,7 @@ async def remove_user(user_id=None, username=None):
     db = await get_db()
     async with db.acquire() as conn:
         await conn.execute(str(query.delete()))
+    await notify(UserRemovedEvent(user_id, username))
 
 
 async def find_users(limit=1000, **filters):
