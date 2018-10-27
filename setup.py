@@ -13,7 +13,7 @@ except IOError:
 
 setup(
     name='guillotina_hydraidp',
-    version='1.0.3.dev0',
+    version='1.0.3',
     description='Guillotina based identity provider for hydra',
     long_description=README,
     install_requires=[
