@@ -117,7 +117,7 @@ async def create_user(**data):
 
     await notify(UserCreatedEvent(
         data['id'],
-        data['email'],
+        data.get('email', ''),
         data['username'],
         data.get('data', {}),
         data.get('allowed_scopes', [])
