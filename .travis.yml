@@ -25,9 +25,9 @@ install:
   - pip install flake8 codecov mypy
   - sleep 5
 script:
-  - flake8 guillotina --config=setup.cfg
-  - mypy guillotina/
-  - pytest -s --cov=guillotina -s --tb=native -v --cov-report term-missing --cov-append guillotina
+  - flake8 guillotina_hydraidp --config=setup.cfg
+  - mypy guillotina_hydraidp/
+  - pytest -s --cov=guillotina_hydraidp -s --tb=native -v --cov-report term-missing --cov-append guillotina_hydraidp
 after_success:
   - codecov
 
