@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+import datetime
 
 import aiohttp
 import argon2
@@ -12,8 +13,7 @@ from guillotina.interfaces import (IApplication, IPasswordChecker,
                                    IPasswordHasher)
 from pypika import PostgreSQLQuery as Query
 from pypika import Table
-from Crypto.PublicKey import RSA
-from guillotina import jose
+from jwcrypto import jwe, jwk
 from guillotina.event import notify
 from guillotina_hydraidp.events import UserCreatedEvent
 from guillotina_hydraidp.events import UserModifiedEvent
@@ -27,6 +27,8 @@ ph = argon2.PasswordHasher()
 
 DB_ATTR = '_hydraidp_db_pool'
 REGISTRATION_KEY = None
+PUB_INTERNAL_KEY = None
+PRIV_INTERNAL_KEY = None
 
 
 @configure.utility(provides=IPasswordHasher, name='argon2')
@@ -222,18 +224,70 @@ async def validate_recaptcha(recaptcha_response):
                 return False
 
 
-async def validate_payload(payload):
+def validate_payload(payload):
     global REGISTRATION_KEY
     if REGISTRATION_KEY is None and app_settings['registration_key']:
-        REGISTRATION_KEY = {'k': RSA.importKey(app_settings['registration_key'])}  # noqa
+        REGISTRATION_KEY = jwk.JWK.from_pem(app_settings['registration_key'])  # Priv Key
     try:
-        jwt = jose.decrypt(
-            jose.deserialize_compact(payload), REGISTRATION_KEY)
-        return jwt.claims
-    except jose.Expired:
+        jwetoken = jwe.JWE()
+        jwetoken.deserialize(payload.decode('utf-8'), key=REGISTRATION_KEY)
+        return json.loads(jwetoken.payload)
+    except jwe.InvalidJWEOperation:
         # expired token
-        logger.warn(f'Expired token {payload}', exc_info=True)
+        logger.warn(f'Invalid operation', exc_info=True)
         return
-    except jose.Error:
+    except jwe.InvalidJWEData:
+        logger.warn(f'Invalid data', exc_info=True)
+        return
+
+
+def encrypt_internal_payload(payload):
+    global PUB_INTERNAL_KEY
+    if PUB_INTERNAL_KEY is None and app_settings['internal_key']['pub']:
+        PUB_INTERNAL_KEY = jwk.JWK.from_pem(
+            app_settings['internal_key']['pub'])
+    try:
+        protected_header = {
+            "alg": "RSA-OAEP-256",
+            "enc": "A256CBC-HS512",
+            "typ": "JWE",
+            "kid": PUB_INTERNAL_KEY.thumbprint(),
+        }
+        if isinstance(payload, dict):
+            payload['_timestamp'] = datetime.datetime.utcnow().isoformat()
+            payload = json.dumps(payload)
+        elif isinstance(payload, str) or isinstance(payload, bytes):
+            data = json.loads(payload)
+            data['_timestamp'] = datetime.datetime.utcnow().isoformat()
+            payload = json.dumps(data)
+        jwetoken = jwe.JWE(
+            payload.encode('utf-8'),
+            recipient=PUB_INTERNAL_KEY,
+            protected=protected_header)
+        return jwetoken.serialize(compact=True)
+    except jwe.InvalidJWEOperation:
+        # expired token
+        logger.warn(f'Invalid operation on jwe encrypt', exc_info=True)
+        return
+    except jwe.InvalidJWEData:
+        logger.warn(f'Error decrypting JWT token', exc_info=True)
+        return
+
+
+def decrypt_internal_payload(payload):
+    global PRIV_INTERNAL_KEY
+    if PRIV_INTERNAL_KEY is None and app_settings['internal_key']['priv']:
+        PRIV_INTERNAL_KEY = jwk.JWK.from_pem(
+            app_settings['internal_key']['priv'])
+    try:
+        jwetoken = jwe.JWE()
+        jwetoken.deserialize(payload, key=PRIV_INTERNAL_KEY)
+        return json.loads(jwetoken.payload)
+
+    except jwe.InvalidJWEOperation:
+        # expired token
+        logger.warn(f'Invalid operation on jwe decrypt', exc_info=True)
+        return
+    except jwe.InvalidJWEData:
         logger.warn(f'Error decrypting JWT token', exc_info=True)
         return

@@ -27,5 +27,6 @@ def includeme(root):
     custom application initialization here
     """
     configure.scan('guillotina_hydraidp.api')
+    configure.scan('guillotina_hydraidp.join')
     configure.scan('guillotina_hydraidp.storage')
     configure.scan('guillotina_hydraidp.json_definitions')
