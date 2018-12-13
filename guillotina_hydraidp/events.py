@@ -2,18 +2,6 @@ from zope.interface import implementer
 from guillotina_hydraidp.interfaces import IUserCreatedEvent
 from guillotina_hydraidp.interfaces import IUserModifiedEvent
 from guillotina_hydraidp.interfaces import IUserRemovedEvent
-from guillotina_hydraidp.interfaces import IUserJoinEvent
-
-
-@implementer(IUserJoinEvent)
-class UserJoinEvent:
-    def __init__(self, id_, email, fullname, data, allowed_scopes, token):
-        self.id = id_
-        self.email = email
-        self.fullname = fullname
-        self.data = data
-        self.allowed_scopes = allowed_scopes
-        self.token = token
 
 
 @implementer(IUserCreatedEvent)

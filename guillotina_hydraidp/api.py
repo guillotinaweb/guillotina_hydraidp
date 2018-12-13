@@ -374,7 +374,7 @@ async def del_consent(context, request):
 
 @configure.service(
     method='POST', name='@users',
-    permission='guillotina.ManageAddons',
+    permission='guillotina.AddUsers',
     context=IApplication,
     summary='Create user',
     parameters=[{
@@ -413,12 +413,9 @@ async def post_user(context, request):
     return data
 
 
-
-
-
 @configure.service(
     method='PATCH', name='@users/{id}',
-    permission='guillotina.ManageAddons',
+    permission='guillotina.EditUsers',
     context=IApplication,
     summary='Update user',
     parameters=[{
@@ -447,7 +444,7 @@ async def update_user(context, request):
 
 @configure.service(
     method='DELETE', name='@users/{userid}',
-    permission='guillotina.ManageAddons',
+    permission='guillotina.DeleteUsers',
     context=IApplication,
     summary='Delete user',
     parameters=[{
@@ -460,7 +457,7 @@ async def delete_user(context, request):
 
 @configure.service(
     method='GET', name='@users',
-    permission='guillotina.ManageAddons',
+    permission='guillotina.ListUsers',
     context=IApplication,
     summary='Get users',
     responses={
@@ -487,7 +484,7 @@ async def get_users(context, request):
 
 @configure.service(
     method='GET', name='@users/{userid}',
-    permission='guillotina.ManageAddons',
+    permission='guillotina.GetUser',
     context=IApplication,
     summary='Get user',
     parameters=[{
